@@ -1,205 +1,213 @@
-import random
-from sistema_gacha import SimuladorGacha
-from sistema_combine import SistemaCombine
-from config import PITY_COMBINE_CONFIG, CONFIG_GACHA, REGRAS_COMBINE_ESTRATEGICO
+# main.py
 
-def exibir_estado_completo(simulador: SimuladorGacha):
-    """Função auxiliar para mostrar o estado completo da simulação."""
+import random
+from gacha_system import GachaSimulator
+from combine_system import CombineSystem
+from config import PITY_COMBINE_CONFIG, GACHA_CONFIG, STRATEGIC_COMBINE_RULES
+
+def display_full_state(simulator: GachaSimulator):
+    """Helper function to show the complete simulation state."""
     print("\n" + "="*40)
-    print("ESTADO ATUAL DA SIMULAÇÃO")
-    print(f" -> Diamantes Gastos: {simulador.diamantes_gastos:,}".replace(",", "."))
-    print(f" -> Pity de Pulls: {simulador.pity_pulls_contador} / {CONFIG_GACHA['PITY_PULLS_THRESHOLD']}")
-    print(f" -> Pity de Combine: {simulador.pity_combine_contador} / {PITY_COMBINE_CONFIG['THRESHOLD']}")
+    print("CURRENT SIMULATION STATE")
+    print(f" -> Diamonds Spent: {simulator.diamonds_spent:,}".replace(",", "."))
+    print(f" -> Pull Pity: {simulator.pull_pity_counter} / {GACHA_CONFIG['PITY_PULLS_THRESHOLD']}")
+    print(f" -> Combine Pity: {simulator.combine_pity_counter} / {PITY_COMBINE_CONFIG['THRESHOLD']}")
     
-    if simulador.creditos_combine:
-        print(" -> Créditos de Combine (Base Mantida):")
-        for (familiar, raridade), qtd in simulador.creditos_combine.items():
-            print(f"    - {qtd}x {familiar} ({raridade}*)")
+    if simulator.combine_credits:
+        print(" -> Combine Credits (Base Retained):")
+        for (familiar, rarity), qty in simulator.combine_credits.items():
+            print(f"    - {qty}x {familiar} ({rarity}*)")
 
     print("="*40)
 
-def exibir_inventario(simulador: SimuladorGacha):
-    """Mostra o inventário de forma organizada e compacta."""
-    print("\n--- SEU INVENTÁRIO ---")
-    encontrou_algo = False
-    # Extrai a letra da categoria para agrupar
-    familiares_por_categoria = {}
-    for f_nome in simulador.familiares:
-        # Acha a categoria pela ordem na lista, não pelo nome
-        indice = simulador.familiares.index(f_nome)
-        indice_categoria = indice // simulador.config.get("FAMILIARES_POR_CATEGORIA", 4) # Usa 4 como padrão
-        letra_categoria = "ABC"[indice_categoria]
-        if letra_categoria not in familiares_por_categoria:
-            familiares_por_categoria[letra_categoria] = []
-        familiares_por_categoria[letra_categoria].append(f_nome)
+def display_inventory(simulator: GachaSimulator):
+    """Shows the inventory in an organized and compact way."""
+    print("\n--- YOUR INVENTORY ---")
+    found_something = False
+    # Extracts the category letter to group
+    familiars_by_category = {}
+    for f_name in simulator.familiars:
+        # Finds the category by its order in the list, not by name
+        index = simulator.familiars.index(f_name)
+        category_index = index // simulator.config.get("FAMILIARS_PER_CATEGORY", 4) # Uses 4 as default
+        category_letter = "ABC"[category_index]
+        if category_letter not in familiars_by_category:
+            familiars_by_category[category_letter] = []
+        familiars_by_category[category_letter].append(f_name)
 
-    for cat, fams in sorted(familiares_por_categoria.items()):
+    for cat, fams in sorted(familiars_by_category.items()):
         for familiar in sorted(fams):
-            itens_deste_familiar = []
-            for raridade, quantidade in simulador.inventario[familiar].items():
-                if quantidade > 0:
-                    itens_deste_familiar.append(f"{quantidade}x ({raridade}*)")
+            items_of_this_familiar = []
+            for rarity, quantity in simulator.inventory[familiar].items():
+                if quantity > 0:
+                    items_of_this_familiar.append(f"{quantity}x ({rarity}*)")
             
-            if itens_deste_familiar:
-                encontrou_algo = True
-                # Mostra o nome do familiar e a categoria
-                print(f"{familiar}: {', '.join(itens_deste_familiar)}")
+            if items_of_this_familiar:
+                found_something = True
+                # Shows the familiar name and category
+                print(f"{familiar}: {', '.join(items_of_this_familiar)}")
     
-    if not encontrou_algo:
-        print("O inventário está vazio.")
+    if not found_something:
+        print("The inventory is empty.")
     print("-" * 22)
 
-def menu_principal():
-    """Função que gerencia o menu interativo."""
-    simulador = SimuladorGacha()
-    combinador = SistemaCombine()
-    print("Bem-vindo ao Simulador de Gacha e Combine!")
+def main_menu():
+    """Function that manages the interactive menu."""
+    simulator = GachaSimulator()
+    combiner = CombineSystem()
+    print("Welcome to the Gacha and Combine Simulator!")
 
     while True:
-        exibir_estado_completo(simulador)
+        display_full_state(simulator)
 
-        print("\nO que você deseja fazer?")
+        print("\nWhat would you like to do?")
         print("  --- Gacha ---")
-        print("  1. Puxar 1x")
-        print("  2. Puxar 11x")
-        print("  --- Combinação ---")
-        print("  3. Combinar Automático (Raridades Baixas)")
-        print("  4. Combinar em Cadeia (Estratégico)")
-        print("  --- Outros ---")
-        print("  5. Ver Inventário")
-        print("  6. Sair")
-        print("  --- Testes ---")
-        print("  7. Puxar em Massa (Avançar Tempo)")
+        print("  1. Pull 1x")
+        print("  2. Pull 11x")
+        print("  --- Combination ---")
+        print("  3. Auto Combine (Low Rarities)")
+        print("  4. Chain Combine (Strategic)")
+        print("  --- Others ---")
+        print("  5. View Inventory")
+        print("  6. Exit")
+        print("  --- Tests ---")
+        print("  7. Mass Pull (Fast Forward Time)")
         
-        escolha = input("Escolha uma opção: ")
+        choice = input("Choose an option: ")
 
-        if escolha == '1':
-            resultado = simulador.puxar_um()
-            print(f"\nVocê obteve: {resultado[0]} ({resultado[1]}*)")
+        if choice == '1':
+            result = simulator.pull_one()
+            print(f"\nYou obtained: {result[0]} ({result[1]}*)")
         
-        elif escolha == '2':
-            resultados = simulador.puxar_onze()
-            print("\nVocê obteve os seguintes familiares:")
-            for familiar, raridade in resultados:
-                print(f"  - {familiar} ({raridade}*)")
+        elif choice == '2':
+            results = simulator.pull_eleven()
+            print("\nYou obtained the following familiars:")
+            for familiar, rarity in results:
+                print(f"  - {familiar} ({rarity}*)")
 
-        elif escolha == '3':
-            print("\nExecutando combinações automáticas...")
-            logs = combinador.combinar_automatico(simulador.inventario, simulador.familiares)
+        elif choice == '3':
+            print("\nExecuting automatic combinations...")
+            logs = combiner.auto_combine(simulator.inventory, simulator.familiars)
             if not logs:
-                print("Nenhuma combinação automática foi possível.")
+                print("No automatic combination was possible.")
             else:
                 for log in logs:
                     print(log)
         
-        elif escolha == '4':
+        elif choice == '4':
             try:
-                print("\n--- Combinar em Cadeia ---")
-                familiar_alvo = input(f"Qual o nome do familiar alvo (ex: {simulador.familiares[0]})? ")
-                raridade_alvo = int(input("Qual a raridade alvo final (8, 9 ou 10)? "))
+                print("\n--- Chain Combine ---")
+                target_familiar = input(f"What is the name of the target familiar (e.g., {simulator.familiars[0]})? ")
+                target_rarity = int(input("What is the final target rarity (8, 9, or 10)? "))
 
-                # Valida o nome do familiar (ignorando maiúsculas/minúsculas)
-                familiar_real = next((f for f in simulador.familiares if f.lower() == familiar_alvo.lower()), None)
-                if not familiar_real:
-                    print("Erro: Nome de familiar inválido.")
+                # Validates familiar name (case-insensitive)
+                real_familiar = next((f for f in simulator.familiars if f.lower() == target_familiar.lower()), None)
+                if not real_familiar:
+                    print("Error: Invalid familiar name.")
                     continue
                 
-                # Pede os métodos para cada etapa da cadeia
-                metodos = {}
-                for r in range(8, raridade_alvo + 1):
-                    if r == 10 and 'probabilistico' not in REGRAS_COMBINE_ESTRATEGICO.get(10, {}):
-                        print(" -> Para 10*, o único método é 100%.")
-                        metodos[r] = 'garantido'
+                # Asks for methods for each stage of the chain
+                methods = {}
+                for r in range(8, target_rarity + 1):
+                    if r == 10 and 'probabilistic' not in STRATEGIC_COMBINE_RULES.get(10, {}):
+                        print(" -> For 10*, the only method is 100%.")
+                        methods[r] = 'guaranteed'
                         continue
                     while True:
-                        m_input = input(f" -> Qual método usar para a etapa de {r}* (25 ou 100)? ")
+                        m_input = input(f" -> Which method to use for the {r}* stage (25 or 100)? ")
                         if m_input == '25':
-                            metodos[r] = 'probabilistico'
+                            methods[r] = 'probabilistic'
                             break
                         elif m_input == '100':
-                            metodos[r] = 'garantido'
+                            methods[r] = 'guaranteed'
                             break
                         else:
-                            print("Entrada inválida.")
+                            print("Invalid input.")
 
-                # Inicia o "bot" de crafting
-                print(f"\nIniciando combine em cadeia para {familiar_real} -> {raridade_alvo}*...")
-                tentativas_gerais = 0
-                while tentativas_gerais < 100: # Um limite de segurança contra loops infinitos
-                    houve_progresso = False
+                # Starts the crafting "bot"
+                print(f"\nStarting chain combine for {real_familiar} -> {target_rarity}*...")
+                general_attempts = 0
+                while general_attempts < 100: # Safety limit against infinite loops
+                    made_progress = False
                     
-                    # O bot trabalha de baixo para cima: tenta criar 8*, depois 9*, etc.
-                    for r_alvo_etapa in range(8, raridade_alvo + 1):
-                        metodo_etapa = metodos[r_alvo_etapa]
+                    # The bot works from bottom to top: tries to create 8*, then 9*, etc.
+                    for stage_target_rarity in range(8, target_rarity + 1):
+                        stage_method = methods[stage_target_rarity]
                         
-                        sucesso, pontos, msg, creditos_att = combinador.combinar_estrategico(
-                            simulador.inventario, simulador.creditos_combine, r_alvo_etapa, familiar_real, metodo_etapa
+                        success, points, msg, updated_credits = combiner.strategic_combine(
+                            simulator.inventory, simulator.combine_credits, stage_target_rarity, real_familiar, stage_method
                         )
                         
-                        # Se a tentativa foi possível (não deu erro de material insuficiente)
-                        if "insuficiente" not in msg:
-                            print(msg) # Mostra o resultado do passo
-                            simulador.creditos_combine = creditos_att
-                            simulador.pity_combine_contador += pontos
-                            houve_progresso = True
+                        # If the attempt was possible (did not return insufficient materials error)
+                        if "insufficient" not in msg.lower():
+                            print(msg) # Shows step result
+                            simulator.combine_credits = updated_credits
+                            simulator.combine_pity_counter += points
+                            made_progress = True
                             
-                            # Verifica pity de combine
-                            if simulador.pity_combine_contador >= PITY_COMBINE_CONFIG["THRESHOLD"]:
-                                num_pities = simulador.pity_combine_contador // PITY_COMBINE_CONFIG["THRESHOLD"]
-                                simulador.pity_combine_contador %= PITY_COMBINE_CONFIG["THRESHOLD"]
+                            # Checks combine pity
+                            if simulator.combine_pity_counter >= PITY_COMBINE_CONFIG["THRESHOLD"]:
+                                num_pities = simulator.combine_pity_counter // PITY_COMBINE_CONFIG["THRESHOLD"]
+                                simulator.combine_pity_counter %= PITY_COMBINE_CONFIG["THRESHOLD"]
                                 for _ in range(num_pities):
-                                    recompensa = random.choice(simulador.familiares)
-                                    simulador.inventario[recompensa][PITY_COMBINE_CONFIG["REWARD_RARITY"]] += 1
-                                    print(f"--- PITY DE COMBINE ATINGIDO! Recompensa: 1x {recompensa} 7*! ---")
+                                    reward = random.choice(simulator.familiars)
+                                    simulator.inventory[reward][PITY_COMBINE_CONFIG["REWARD_RARITY"]] += 1
+                                    print(f"--- COMBINE PITY REACHED! Reward: 1x {reward} 7*! ---")
                             
-                            break # Se houve uma ação, para e reinicia a análise do zero
+                            break # If an action was taken, stops and restarts analysis from scratch
                     
-                    if houve_progresso:
-                        tentativas_gerais += 1
-                        continue # Volta ao início do loop para tentar o próximo passo
+                    if made_progress:
+                        general_attempts += 1
+                        continue # Goes back to the beginning of the loop to try the next step
                     else:
-                        # Se o loop inteiro rodou e não houve progresso, não há mais materiais
-                        print("\nProcesso finalizado: Não há mais materiais para continuar a combinação.")
+                        # If the entire loop ran and there was no progress, no more materials are available
+                        print("\nProcess finished: There are no more materials to continue the combination.")
                         break
                 
             except ValueError:
-                print("Entrada inválida. Por favor, insira um número para a raridade.")
+                print("Invalid input. Please enter a number for the rarity.")
             except Exception as e:
-                print(f"Ocorreu um erro inesperado: {e}")
+                print(f"An unexpected error occurred: {e}")
 
-        elif escolha == '5':
-            exibir_inventario(simulador)
+        elif choice == '5':
+            display_inventory(simulator)
 
-        elif escolha == '6':
-            print("Obrigado por usar o simulador!")
+        elif choice == '6':
+            print("Thank you for using the simulator!")
             break
 
-        elif escolha == '7':
-            print("\n--- Puxar em Massa ---")
-            print("  1. Por número de pulls")
-            print("  2. Por quantidade de diamantes")
-            sub_escolha = input("Escolha o método: ")
+        elif choice == '7':
+            print("\n--- Mass Pull ---")
+            print("  1. By number of pulls")
+            print("  2. By amount of diamonds")
+            sub_choice = input("Choose the method: ")
             
             try:
-                if sub_escolha == '1':
-                    qtd = int(input("Quantos pulls você quer fazer? "))
-                    pulls_feitos, custo = simulador.puxar_em_massa(num_pulls=qtd)
-                    print(f"\n{pulls_feitos:,} pulls executados! Custo: {custo:,} diamantes.".replace(",", "."))
+                pulls_to_do = 0
+                if sub_choice == '1':
+                    pulls_to_do = int(input("How many pulls do you want to perform? "))
 
-                elif sub_escolha == '2':
-                    qtd = int(input("Quantos diamantes você quer gastar? "))
-                    pulls_feitos, custo = simulador.puxar_em_massa(num_diamantes=qtd)
-                    print(f"\n{pulls_feitos:,} pulls executados! Custo: {custo:,} diamantes.".replace(",", "."))
+                elif sub_choice == '2':
+                    diamond_amount = int(input("How many diamonds do you want to spend? "))
+                    # Calculate number of pulls BEFORE calling the function
+                    pulls_to_do = diamond_amount // simulator.config["SINGLE_PULL_COST"]
                 else:
-                    print("Opção inválida.")
+                    print("Invalid option.")
+                
+                if pulls_to_do > 0:
+                    print(f"Executing {pulls_to_do:,} pulls...".replace(",", "."))
+                    # Calls the OPTIMIZED function
+                    simulator.optimized_bulk_pull(num_pulls=pulls_to_do)
+                    print("Mass pulls completed!")
+
             except ValueError:
-                print("Entrada inválida. Por favor, insira um número.")
+                print("Invalid input. Please enter a number.")
             except Exception as e:
-                print(f"Ocorreu um erro: {e}")
+                print(f"An error occurred: {e}")
 
         else:
-            print("Opção inválida. Por favor, tente novamente.")
+            print("Invalid option. Please try again.")
 
 
 if __name__ == "__main__":
-    menu_principal()
+    main_menu()
