@@ -1,4 +1,4 @@
-# gacha_system.py
+# GachaSystem.py
 # Contains the class and all logic to simulate the pull system and game state.
 
 import numpy as np
